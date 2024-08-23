@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Failed Test Cases</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        #viewToggle {
+            margin: 20px;
+            text-align: center;
+        }
+
+        #viewToggle button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #tableView button, #detailView button, #statisticsView button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #tableView button:hover, #detailView button:hover, #viewToggle button:hover, #statisticsView button:hover {
+            background-color: #45a049;
+        }
+
+        #tableView, #detailView, #statisticsView {
+            display: none;
+            margin: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            margin: 10% auto;
+            display: block;
+            width: 100%;
+            animation-name: zoom;
+            animation-duration: 0.6s;
+        }
+
+        @keyframes zoom {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        img {
+            width: 200px;
+            height: auto;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .detail-view-item {
+            background-color: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .detail-view-item img {
+            margin-left: 20px;
+        }
+
+        .detail-view-item h3 {
+            margin: 0;
+        }
+
+        .detail-view-item p {
+            margin: 5px 0;
+        }
+
+        .total-failures {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Failed Test Cases</h1>
+    </header>
+
+    <div id="viewToggle">
+        <button onclick="showTableView()">Table View</button>
+        <button onclick="showDetailView()">Detail View</button>
+        <button onclick="showStatistics()">Statistics</button>
+    </div>
+
+    <div id="tableView">
+        <table>
+            <thead>
+                <tr>
+                    <th>Index</th>
+                    <th>Location Name</th>
+                    <th>Lat & Lon</th>
+                    <th>Supplier Code</th>
+                    <th>Screenshot</th>
+                </tr>
+            </thead>
+            <tbody id="testTable">
+                <!-- Data will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="detailView">
+        <div class="total-failures" id="totalFailures">Total Failures: 0</div>
+        <div id="detailContainer">
+            <!-- Detailed view items will be inserted here dynamically -->
+        </div>
+    </div>
+
+    <div id="statisticsView" style="display:none;">
+        <h2>Statistics</h2>
+        <p id="locationNameDupes"></p>
+        <p id="supplierCodeDupes"></p>
+        <p id="latLonDupes"></p>
+    </div>
+
+    <div id="myModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
+
+    <script>
+        async function loadFailedTestCases() {
+            const response = await fetch('failed_locations.json'); // Path to your failed JSON file
+            const data = await response.json();
+            const table = document.getElementById('testTable');
+            const detailContainer = document.getElementById('detailContainer');
+            const totalFailures = document.getElementById('totalFailures');
+            const failureCount = {};
+            let totalFailuresCount = 0;
+
+            data.forEach((item, index) => {
+                const failureKey = `${item.Customer_name}-${item.Customer_code}-${item.lat_lon}`;
+                failureCount[failureKey] = (failureCount[failureKey] || 0) + 1;
+                totalFailuresCount++;
+
+                // Table View
+                const row = document.createElement('tr');
+
+                const indexCell = document.createElement('td');
+                indexCell.textContent = index + 1;
+                row.appendChild(indexCell);
+
+                const locationCell = document.createElement('td');
+                locationCell.textContent = item.Customer_name;
+                row.appendChild(locationCell);
+
+                const latLonCell = document.createElement('td');
+                latLonCell.textContent = item.lat_lon;
+                row.appendChild(latLonCell);
+
+                const supplierCodeCell = document.createElement('td');
+                supplierCodeCell.textContent = item.Customer_code;
+                row.appendChild(supplierCodeCell);
+
+                const imageCell = document.createElement('td');
+                const imgElement = document.createElement('img');
+                imgElement.src = `ScreenshotforAutomation/${item.Customer_code}.png`;
+                imgElement.alt = `${item.Customer_code} Screenshot`;
+                imgElement.onclick = function() {
+                    openModal(imgElement.src);
+                };
+                imageCell.appendChild(imgElement);
+                row.appendChild(imageCell);
+
+                table.appendChild(row);
+
+                // Detail View
+                const detailItem = document.createElement('div');
+                detailItem.classList.add('detail-view-item');
+
+                const detailText = document.createElement('div');
+
+                const detailTitle = document.createElement('h3');
+                detailTitle.textContent = `${index + 1}. ${item.Customer_name}`;
+                detailText.appendChild(detailTitle);
+
+                const detailLatLon = document.createElement('p');
+                detailLatLon.textContent = `Lat & Lon: ${item.lat_lon}`;
+                detailText.appendChild(detailLatLon);
+
+                const detailSupplierCode = document.createElement('p');
+                detailSupplierCode.textContent = `Supplier Code: ${item.Customer_code}`;
+                detailText.appendChild(detailSupplierCode);
+
+                const failureCountText = document.createElement('p');
+                failureCountText.textContent = `Failure Count: ${failureCount[failureKey]}`;
+                detailText.appendChild(failureCountText);
+
+                const detailImage = document.createElement('img');
+                detailImage.src = `ScreenshotforAutomation/${item.Customer_code}.png`;
+                detailImage.alt = `${item.Customer_code} Screenshot`;
+                detailImage.onclick = function() {
+                    openModal(detailImage.src);
+                };
+
+                detailItem.appendChild(detailText);
+                detailItem.appendChild(detailImage);
+
+                detailContainer.appendChild(detailItem);
+            });
+
+            // Update total failures count
+            totalFailures.textContent = `Total Failures: ${totalFailuresCount}`;
+        }
+
+        function showTableView() {
+            document.getElementById('tableView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+            document.getElementById('statisticsView').style.display = 'none';
+        }
+
+        function showDetailView() {
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            document.getElementById('statisticsView').style.display = 'none';
+        }
+
+        function showStatistics() {
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'none';
+            document.getElementById('statisticsView').style.display = 'block';
+
+            calculateStatistics();
+        }
+
+        function openModal(src) {
+            const modal = document.getElementById("myModal");
+            const modalImg = document.getElementById("img01");
+
+            modal.style.display = "block";
+            modalImg.src = src;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("myModal");
+            modal.style.display = "none";
+        }
+
+        async function calculateStatistics() {
+            const mainDataResponse = await fetch('henkle_locations_corrected.json'); // Path to your main JSON file
+            const mainData = await mainDataResponse.json();
+
+            const failedDataResponse = await fetch('failed_locations.json'); // Path to your failed JSON file
+            const failedData = await failedDataResponse.json();
+
+            const locationNameDupes = findDuplicates(mainData, 'Customer_name').length;
+            const supplierCodeDupes = findDuplicates(mainData, 'Customer_code').length;
+            const latLonDupes = findDuplicates(mainData, 'lat_lon').length;
+
+            const failedLocationNameDupes = findDuplicates(failedData, 'Customer_name').length;
+            const failedSupplierCodeDupes = findDuplicates(failedData, 'Customer_code').length;
+            const failedLatLonDupes = findDuplicates(failedData, 'lat_lon').length;
+
+            document.getElementById('locationNameDupes').textContent = `Duplicate Location Names: ${locationNameDupes} in main JSON, ${failedLocationNameDupes} in failed JSON`;
+            document.getElementById('supplierCodeDupes').textContent = `Duplicate Supplier Codes: ${supplierCodeDupes} in main JSON, ${failedSupplierCodeDupes} in failed JSON`;
+            document.getElementById('latLonDupes').textContent = `Duplicate Lat & Lon: ${latLonDupes} in main JSON, ${failedLatLonDupes} in failed JSON`;
+        }
+
+        function findDuplicates(data, key) {
+            const seen = new Set();
+            const duplicates = [];
+
+            data.forEach(item => {
+                const value = item[key];
+                if (seen.has(value)) {
+                    duplicates.push(item);
+                } else {
+                    seen.add(value);
+                }
+            });
+
+            return duplicates;
+        }
+
+        // Load data and show detailed view by default
+        loadFailedTestCases();
+        showDetailView();
+
+        // Close the modal when clicking outside the image
+        window.onclick = function(event) {
+            const modal = document.getElementById("myModal");
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
